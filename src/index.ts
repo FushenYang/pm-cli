@@ -1,5 +1,3 @@
-import { setGlobalDispatcher, ProxyAgent } from "undici";
-setGlobalDispatcher(new ProxyAgent("http://127.0.0.1:6152"));
 import { Command, Options } from "@effect/cli";
 import {
   HttpClient,
@@ -10,10 +8,12 @@ import {
 } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Layer, Schema } from "effect";
+import { NetworkLive } from "./infrastructure/NetworkLive.js";
 import {
   type MarketSummary,
   MarketSummarySchema,
 } from "./domain/MarketSummarySchema.js";
+import { ConfigLive } from "./infrastructure/ConfigLive.js";
 
 // 1. 定义你的第一个 CLI 命令逻辑 (例如叫 sync 命令，未来用来同步全局数据)
 const syncSubCommand = Command.make(
@@ -92,5 +92,6 @@ const cli = Command.run(rootCommand, {
 cli(process.argv).pipe(
   Effect.provide(NodeContext.layer),
   Effect.provide(FetchHttpClient.layer),
+  Effect.provide(NetworkLive),
   NodeRuntime.runMain,
 );
