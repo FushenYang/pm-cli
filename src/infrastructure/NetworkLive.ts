@@ -28,5 +28,6 @@ const UndiciProxyInitLive = Layer.effectDiscard(
 );
 
 export const NetworkLive = UndiciProxyInitLive.pipe(
-  Layer.provide(ConfigLive), // 内部闭环：自己把 AppConfig 的债清了
+  Layer.provide(ConfigLive),
+  Layer.orDie,
 );
