@@ -5,6 +5,7 @@ node_modules/
 .pnpm-store/
 .npm/
 .wrangler/
+.local/
 
 # ==========================================
 # 2. 操作系统垃圾文件
