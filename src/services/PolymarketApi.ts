@@ -6,6 +6,12 @@ import {
   MarketSummarySchema,
 } from "../domain/MarketSummarySchema.js";
 
+export type MarketStatus = "active" | "closed" | "all";
+export const FetchPageOptionsSchema = Schema.Struct({
+  // limit 必须是整数，且范围严格锁定在 1 到 100 之间。默认值为 100
+  limit: Schema.Int.pipe(Schema.between(1, 100), Schema.optional),
+});
+
 // 🌟 1. 铸造高贵的“服务契约标签 (Service Tag)”
 // 对外宣告：我是一个专门负责向 Polymarket 索要数据的核心服务
 export class PolymarketApi extends Context.Tag("PolymarketApi")<
