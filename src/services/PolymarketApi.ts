@@ -1,6 +1,6 @@
 // src/services/PolymarketApi.ts
 import { HttpClient, HttpClientRequest } from "@effect/platform";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema, Array } from "effect";
 import {
   type MarketSummary,
   MarketSummarySchema,
@@ -14,7 +14,11 @@ export class PolymarketApi extends Context.Tag("PolymarketApi")<
     readonly fetchPage: (
       limit: number,
       offset: number,
-    ) => Effect.Effect<Option.Option<readonly MarketSummary[]>, never, never>;
+    ) => Effect.Effect<
+      Option.Option<Array.NonEmptyReadonlyArray<MarketSummary>>,
+      never,
+      never
+    >;
   }
 >() {}
 
@@ -50,9 +54,13 @@ export const PolymarketApiLive = Layer.effect(
             Schema.Array(MarketSummarySchema),
           )(rawData);
 
-          return Option.some(cleanPage).pipe(
-            Option.filter((page) => page.length > 0),
-          );
+          if (cleanPage.length > 0) {
+            return Option.some(
+              cleanPage as Array.NonEmptyReadonlyArray<MarketSummary>,
+            );
+          } else {
+            return Option.none();
+          }
         }).pipe(Effect.orDie),
     };
   }),

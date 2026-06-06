@@ -1,4 +1,4 @@
-import { Command, Options } from "@effect/cli";
+import { Command } from "@effect/cli";
 import {
   HttpClient,
   HttpClientRequest,
@@ -9,12 +9,8 @@ import {
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Layer, Schema } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive.js";
-import {
-  type MarketSummary,
-  MarketSummarySchema,
-} from "./domain/MarketSummarySchema.js";
-import { ConfigLive } from "./infrastructure/ConfigLive.js";
-
+import { type MarketSummary } from "./domain/MarketSummarySchema.js";
+import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
 // 1. 定义你的第一个 CLI 命令逻辑 (例如叫 sync 命令，未来用来同步全局数据)
 const syncSubCommand = Command.make(
   "sync",
@@ -24,44 +20,17 @@ const syncSubCommand = Command.make(
   () =>
     Effect.gen(function* () {
       yield* Console.log(`[pm-cli] 开始抓取市场数据...)`);
-      const baseClient = yield* HttpClient.HttpClient;
-
-      const req = HttpClientRequest.get(
-        "https://gamma-api.polymarket.com/markets",
-      ).pipe(
-        HttpClientRequest.setUrlParams({
-          active: "true",
-          limit: "1",
-          closed: "false",
-        }),
-        HttpClientRequest.setHeader("Accept-Encoding", "identity"),
-      );
-      const response = yield* baseClient.execute(req);
-      const rawData = yield* response.json;
-      const rawList = rawData as unknown[];
-      if (rawList.length === 0) {
-        return yield* Effect.fail(
-          new Error("Polymarket 接口今天居然没有返回任何数据！"),
-        );
-      }
-      const oneRawMarket = rawList[0];
-      yield* Console.log(
-        "[pm-cli] 物理数据下载成功，正在启动 Schema 手术刀清洗提纯...",
-      );
-
-      const cleanMarket: MarketSummary =
-        yield* Schema.decodeUnknown(MarketSummarySchema)(oneRawMarket);
-      yield* Console.log("[pm-cli] 提纯成功！正在准备将其转换为工业 CSV 行...");
+      const polymarketService = yield* PolymarketApi;
+      const maybeMarkets = yield* polymarketService.fetchPage(100, 0);
 
       const escapeCsv = (val: any) => `"${String(val).replace(/"/g, '""')}"`;
 
-      const headers = Object.keys(cleanMarket).join(",");
-      const rowValues = Object.values(cleanMarket).map(escapeCsv).join(",");
+      const headers = Object.keys(Markets).join(",");
+      const rowValues = Object.values(Markets).map(escapeCsv).join(",");
       const csvContent = `${headers}\n${rowValues}\n`;
 
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-
       const localDirPath = path.join(process.cwd(), ".local");
       yield* fs.makeDirectory(localDirPath, { recursive: true });
       const targetFilePath = path.join(localDirPath, "one.csv");
@@ -84,6 +53,7 @@ const cli = Command.run(rootCommand, {
 
 // 3. 驱动主进程运行，并自动注入 Node.js 环境的整套大礼包（包含终端、文件系统、进程处理）
 cli(process.argv).pipe(
+  Effect.provide(PolymarketApiLive),
   Effect.provide(NodeContext.layer),
   Effect.provide(FetchHttpClient.layer),
   Effect.provide(NetworkLive),
