@@ -7,12 +7,17 @@ import {
   FileSystem,
 } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Console, Effect, Layer, Schema, Option } from "effect";
+import { Console, Effect, Layer, Schema, Option, Stream } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive.js";
 import { type MarketSummary } from "./domain/MarketSummarySchema.js";
 import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
 import { marketListToCsv } from "./adapters/CsvPresenter.js";
+import {
+  PolymarketHarvester,
+  PolymarketHarvesterLive,
+} from "./services/PolymarketHarvester.js";
 // 1. 定义你的第一个 CLI 命令逻辑 (例如叫 sync 命令，未来用来同步全局数据)
+
 const syncSubCommand = Command.make(
   "sync",
   // 我们顺手加一个命令行参数（比如过滤选项），体验一下正规 CLI 的快感
@@ -43,9 +48,22 @@ const syncSubCommand = Command.make(
     }),
 );
 
+const allSubCommands = Command.make("all", {}, () =>
+  Effect.gen(function* () {
+    const polymarketService = yield* PolymarketHarvester;
+    const stream = polymarketService.fetchAll();
+    const collectedChunk = yield* Stream.runCollect(
+      stream.pipe(Stream.take(2)),
+    );
+    yield* Console.log(collectedChunk);
+
+    yield* Console.log(`测试一下全量抓取的命令...`);
+  }),
+);
+
 // 2. 建立一个全局的主命令根节点 (Root Command)，把 sync 挂载为它的子命令
 const rootCommand = Command.make("pm").pipe(
-  Command.withSubcommands([syncSubCommand]),
+  Command.withSubcommands([syncSubCommand, allSubCommands]),
 );
 
 // 2. 将命令打包为标准的 CLI 应用程序
@@ -56,6 +74,7 @@ const cli = Command.run(rootCommand, {
 
 // 3. 驱动主进程运行，并自动注入 Node.js 环境的整套大礼包（包含终端、文件系统、进程处理）
 cli(process.argv).pipe(
+  Effect.provide(PolymarketHarvesterLive),
   Effect.provide(PolymarketApiLive),
   Effect.provide(NodeContext.layer),
   Effect.provide(FetchHttpClient.layer),

@@ -22,7 +22,7 @@ export const PolymarketHarvesterLive = Layer.effect(
         type Seed = {
           readonly offset: number;
           readonly limit: number;
-          readonly active: "true" | "false" | "all";
+          readonly active: "true" | "false";
         };
         type PageOutput = Option.Option<
           Array.NonEmptyReadonlyArray<MarketSummary>

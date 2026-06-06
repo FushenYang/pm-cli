@@ -16,7 +16,7 @@ export const FetchPageOptionsSchema = Schema.Struct({
     Schema.greaterThanOrEqualTo(0),
     Schema.optionalWith({ default: () => 0 }),
   ),
-  active: Schema.Literal("true", "false", "all").pipe(
+  active: Schema.Literal("true", "false").pipe(
     Schema.optionalWith({ default: () => "true" as const }),
   ),
 });
