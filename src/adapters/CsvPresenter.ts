@@ -2,7 +2,7 @@ import { Array } from "effect";
 import type { MarketSummary } from "../domain/MarketSummarySchema.js";
 
 export const marketListToCsv = (
-  markets: Array.NonEmptyArray<MarketSummary>,
+  markets: Array.NonEmptyReadonlyArray<MarketSummary>,
 ): string => {
   // 1. 抓取第一条数据作为 CSV 提取表头的绝对依据
   const firstMarket = markets[0];

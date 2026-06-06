@@ -7,10 +7,11 @@ import {
   FileSystem,
 } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Console, Effect, Layer, Schema } from "effect";
+import { Console, Effect, Layer, Schema, Option } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive.js";
 import { type MarketSummary } from "./domain/MarketSummarySchema.js";
 import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
+import { marketListToCsv } from "./adapters/CsvPresenter.js";
 // 1. 定义你的第一个 CLI 命令逻辑 (例如叫 sync 命令，未来用来同步全局数据)
 const syncSubCommand = Command.make(
   "sync",
@@ -22,16 +23,15 @@ const syncSubCommand = Command.make(
       yield* Console.log(`[pm-cli] 开始抓取市场数据...)`);
       const polymarketService = yield* PolymarketApi;
       const maybeMarkets = yield* polymarketService.fetchPage(100, 0);
-
-      const escapeCsv = (val: any) => `"${String(val).replace(/"/g, '""')}"`;
-
-      const headers = Object.keys(Markets).join(",");
-      const rowValues = Object.values(Markets).map(escapeCsv).join(",");
-      const csvContent = `${headers}\n${rowValues}\n`;
+      if (Option.isNone(maybeMarkets)) {
+        yield* Console.log("数据读取完成");
+        return;
+      }
+      const csvContent = marketListToCsv(maybeMarkets.value);
 
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const localDirPath = path.join(process.cwd(), ".local");
+      const localDirPath = path.join(path.resolve("."), ".local");
       yield* fs.makeDirectory(localDirPath, { recursive: true });
       const targetFilePath = path.join(localDirPath, "one.csv");
       yield* fs.writeFileString(targetFilePath, csvContent);
