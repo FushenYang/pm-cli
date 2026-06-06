@@ -19,17 +19,11 @@ import { ConfigLive } from "./infrastructure/ConfigLive.js";
 const syncSubCommand = Command.make(
   "sync",
   // 我们顺手加一个命令行参数（比如过滤选项），体验一下正规 CLI 的快感
-  {
-    unmoderated: Options.boolean("unmoderated").pipe(
-      Options.withDefault(false),
-    ),
-  },
+  {},
   // 核心执行逻辑
-  ({ unmoderated }) =>
+  () =>
     Effect.gen(function* () {
-      yield* Console.log(
-        `[pm-cli] 开始抓取市场数据... (包含小众市场: ${unmoderated})`,
-      );
+      yield* Console.log(`[pm-cli] 开始抓取市场数据...)`);
       const baseClient = yield* HttpClient.HttpClient;
 
       const req = HttpClientRequest.get(
