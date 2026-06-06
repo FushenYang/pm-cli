@@ -44,7 +44,9 @@ export const PolymarketHarvesterLive = Layer.effect(
             if (Option.isNone(maybePage)) {
               return [maybePage, Option.none<Seed>()] as paginateReturn;
             }
-
+            yield* Effect.log(
+              `[PolymarketHarvester] ✅ 当前offset: ${currentSeed.offset} ,获取了 ${maybePage.value.length} 条数据`,
+            );
             const nextSeed: Seed = {
               ...currentSeed,
               offset: currentSeed.offset + currentSeed.limit,
