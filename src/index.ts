@@ -22,7 +22,10 @@ const syncSubCommand = Command.make(
     Effect.gen(function* () {
       yield* Console.log(`[pm-cli] 开始抓取市场数据...)`);
       const polymarketService = yield* PolymarketApi;
-      const maybeMarkets = yield* polymarketService.fetchPage();
+      const maybeMarkets = yield* polymarketService.fetchPage({
+        limit: 100,
+        offset: 0,
+      });
       if (Option.isNone(maybeMarkets)) {
         yield* Console.log("数据读取完成");
         return;

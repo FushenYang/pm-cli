@@ -23,6 +23,7 @@ export const FetchPageOptionsSchema = Schema.Struct({
 export type FetchPageOptions = Schema.Schema.Encoded<
   typeof FetchPageOptionsSchema
 >;
+export type HarvestOptions = Omit<FetchPageOptions, "limit" | "offset">;
 
 // 🌟 1. 铸造高贵的“服务契约标签 (Service Tag)”
 // 对外宣告：我是一个专门负责向 Polymarket 索要数据的核心服务
