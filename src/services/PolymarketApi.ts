@@ -6,11 +6,23 @@ import {
   MarketSummarySchema,
 } from "../domain/MarketSummarySchema.js";
 
-export type MarketStatus = "active" | "closed" | "all";
 export const FetchPageOptionsSchema = Schema.Struct({
   // limit 必须是整数，且范围严格锁定在 1 到 100 之间。默认值为 100
-  limit: Schema.Int.pipe(Schema.between(1, 100), Schema.optional),
+  limit: Schema.Int.pipe(
+    Schema.between(1, 100),
+    Schema.optionalWith({ default: () => 100 }),
+  ),
+  offset: Schema.Int.pipe(
+    Schema.greaterThanOrEqualTo(0),
+    Schema.optionalWith({ default: () => 0 }),
+  ),
+  active: Schema.Literal("true", "false", "all").pipe(
+    Schema.optionalWith({ default: () => "true" as const }),
+  ),
 });
+export type FetchPageOptions = Schema.Schema.Encoded<
+  typeof FetchPageOptionsSchema
+>;
 
 // 🌟 1. 铸造高贵的“服务契约标签 (Service Tag)”
 // 对外宣告：我是一个专门负责向 Polymarket 索要数据的核心服务
@@ -18,8 +30,7 @@ export class PolymarketApi extends Context.Tag("PolymarketApi")<
   PolymarketApi,
   {
     readonly fetchPage: (
-      limit: number,
-      offset: number,
+      options?: FetchPageOptions,
     ) => Effect.Effect<
       Option.Option<Array.NonEmptyReadonlyArray<MarketSummary>>,
       never,
@@ -36,17 +47,20 @@ export const PolymarketApiLive = Layer.effect(
     const baseClient = yield* HttpClient.HttpClient;
 
     return {
-      fetchPage: (limit, offset) =>
+      fetchPage: (options?: FetchPageOptions) =>
         Effect.gen(function* () {
+          const validated = yield* Schema.decodeUnknown(FetchPageOptionsSchema)(
+            options ?? {},
+          );
           // A. 组装请求
           const req = HttpClientRequest.get(
             "https://gamma-api.polymarket.com/markets",
           ).pipe(
             HttpClientRequest.setUrlParams({
-              active: "true",
+              active: validated.active,
               closed: "false",
-              limit: String(limit),
-              offset: String(offset),
+              limit: String(validated.limit),
+              offset: String(validated.offset),
             }),
             HttpClientRequest.setHeader("Accept-Encoding", "identity"),
           );

@@ -22,7 +22,7 @@ const syncSubCommand = Command.make(
     Effect.gen(function* () {
       yield* Console.log(`[pm-cli] 开始抓取市场数据...)`);
       const polymarketService = yield* PolymarketApi;
-      const maybeMarkets = yield* polymarketService.fetchPage(100, 0);
+      const maybeMarkets = yield* polymarketService.fetchPage();
       if (Option.isNone(maybeMarkets)) {
         yield* Console.log("数据读取完成");
         return;
@@ -33,7 +33,7 @@ const syncSubCommand = Command.make(
       const path = yield* Path.Path;
       const localDirPath = path.join(path.resolve("."), ".local");
       yield* fs.makeDirectory(localDirPath, { recursive: true });
-      const targetFilePath = path.join(localDirPath, "one.csv");
+      const targetFilePath = path.join(localDirPath, "two.csv");
       yield* fs.writeFileString(targetFilePath, csvContent);
 
       yield* Console.log("[pm-cli] 读取数据成功");
