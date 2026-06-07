@@ -1,36 +1,83 @@
-import { Command, Options } from "@effect/cli"
-import { NodeContext, NodeRuntime } from "@effect/platform-node"
-import { Console, Effect } from "effect"
-
+import { Command } from "@effect/cli";
+import {
+  HttpClient,
+  HttpClientRequest,
+  FetchHttpClient,
+  Path,
+  FileSystem,
+} from "@effect/platform";
+import { NodeContext, NodeRuntime } from "@effect/platform-node";
+import { Console, Effect, Layer, Schema, Option, Stream } from "effect";
+import { NetworkLive } from "./infrastructure/NetworkLive.js";
+import { type MarketSummary } from "./domain/MarketSummarySchema.js";
+import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
+import { marketListToCsv } from "./adapters/CsvPresenter.js";
+import {
+  PolymarketHarvester,
+  PolymarketHarvesterLive,
+} from "./services/PolymarketHarvester.js";
 // 1. 定义你的第一个 CLI 命令逻辑 (例如叫 sync 命令，未来用来同步全局数据)
+
 const syncSubCommand = Command.make(
   "sync",
   // 我们顺手加一个命令行参数（比如过滤选项），体验一下正规 CLI 的快感
-  { unmoderated: Options.boolean("unmoderated").pipe(Options.withDefault(true)) },
+  {},
   // 核心执行逻辑
-  ({ unmoderated }) => Effect.gen(function* () {
-    yield* Console.log(`[pm-cli] 开始抓取市场数据... (包含小众市场: ${unmoderated})`)
+  () =>
+    Effect.gen(function* () {
+      yield* Console.log(`[pm-cli] 开始抓取市场数据...)`);
+      const polymarketService = yield* PolymarketApi;
+      const maybeMarkets = yield* polymarketService.fetchPage({
+        limit: 100,
+        offset: 0,
+      });
+      if (Option.isNone(maybeMarkets)) {
+        yield* Console.log("数据读取完成");
+        return;
+      }
+      const csvContent = marketListToCsv(maybeMarkets.value);
 
-    // 【未来这一步】：我们会在这里调用 HttpClient 去盘 Polymarket
-    yield* Effect.sleep("1 second") // 模拟一下抓取耗时
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const localDirPath = path.join(path.resolve("."), ".local");
+      yield* fs.makeDirectory(localDirPath, { recursive: true });
+      const targetFilePath = path.join(localDirPath, "two.csv");
+      yield* fs.writeFileString(targetFilePath, csvContent);
 
-    yield* Console.log("[pm-cli] 静态数据同步成功，本地 SQLite 账本已刷新！")
-  })
-)
+      yield* Console.log("[pm-cli] 读取数据成功");
+    }),
+);
+
+const allSubCommands = Command.make("all", {}, () =>
+  Effect.gen(function* () {
+    const polymarketService = yield* PolymarketHarvester;
+    const stream = polymarketService.fetchAll();
+    const collectedChunk = yield* Stream.runCollect(
+      stream.pipe(Stream.take(2)),
+    );
+    yield* Console.log(collectedChunk);
+
+    yield* Console.log(`测试一下全量抓取的命令...`);
+  }),
+);
 
 // 2. 建立一个全局的主命令根节点 (Root Command)，把 sync 挂载为它的子命令
 const rootCommand = Command.make("pm").pipe(
-  Command.withSubcommands([syncSubCommand])
-)
+  Command.withSubcommands([syncSubCommand, allSubCommands]),
+);
 
 // 2. 将命令打包为标准的 CLI 应用程序
 const cli = Command.run(rootCommand, {
   name: "Polymarket CLI Trader",
-  version: "1.0.0"
-})
+  version: "1.0.0",
+});
 
 // 3. 驱动主进程运行，并自动注入 Node.js 环境的整套大礼包（包含终端、文件系统、进程处理）
 cli(process.argv).pipe(
+  Effect.provide(PolymarketHarvesterLive),
+  Effect.provide(PolymarketApiLive),
   Effect.provide(NodeContext.layer),
-  NodeRuntime.runMain
-)
+  Effect.provide(FetchHttpClient.layer),
+  Effect.provide(NetworkLive),
+  NodeRuntime.runMain,
+);

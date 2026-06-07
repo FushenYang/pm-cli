@@ -20,6 +20,9 @@ importers:
       effect:
         specifier: ^3.21.2
         version: 3.21.2
+      undici:
+        specifier: ^8.3.0
+        version: 8.4.0
     devDependencies:
       '@effect/vitest':
         specifier: ^0.29.0
@@ -826,6 +829,10 @@ packages:
     resolution: {integrity: sha512-UDdpiex+mzigiyrXrGbiUaF4HzTNhKbh2vRNFaTMzcqmLIPrZxaCtwo/1TMSuWoM1Xz3WiTo9KdgI3kRqYzJGg==}
     engines: {node: '>=20.18.1'}
 
+  undici@8.4.0:
+    resolution: {integrity: sha512-tDR4LgFBeV7YBWOFMlmbhtrnFVWuZ6HKbkG+88/csQdhK2tPlW78PnLI2VRjIQtTlslvgSZ4R43WBE+4g6rhng==}
+    engines: {node: '>=22.19.0'}
+
   uuid@11.1.1:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
@@ -1561,6 +1568,8 @@ snapshots:
   undici-types@7.24.6: {}
 
   undici@7.27.1: {}
+
+  undici@8.4.0: {}
 
   uuid@11.1.1: {}
 
