@@ -33,7 +33,7 @@ export class PolymarketApi extends Context.Tag("PolymarketApi")<
     readonly fetchPage: (
       options?: FetchPageOptions,
     ) => Effect.Effect<
-      Option.Option<Array.NonEmptyReadonlyArray<MarketSummary>>,
+      ReadonlyArray<MarketSummary>,
       never,
       never
     >;
@@ -70,18 +70,10 @@ export const PolymarketApiLive = Layer.effect(
           const response = yield* baseClient.execute(req);
           const rawData = yield* response.json;
 
-          // C. 挂上 Schema 手术刀，对全页数组进行大批量提纯清洗
           const cleanPage = yield* Schema.decodeUnknown(
             Schema.Array(MarketSummarySchema),
           )(rawData);
-
-          if (cleanPage.length > 0) {
-            return Option.some(
-              cleanPage as Array.NonEmptyReadonlyArray<MarketSummary>,
-            );
-          } else {
-            return Option.none();
-          }
+          return cleanPage;
         }).pipe(Effect.orDie),
     };
   }),
