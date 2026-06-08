@@ -37,8 +37,8 @@ export const PolymarketHarvesterLive = Layer.effect(
               active,
             });
 
-            yield* Effect.log(
-              `[PolymarketHarvester] ✅ 当前offset: ${currentOffset} ,获取了 ${page.length} 条数据`
+            Effect.log(
+              `[PolymarketHarvester] ✅ 当前offset: ${currentOffset} ,本接口只能获取这么多数据了`,
             );
 
             // 2. 将普通的原生数组转换为 Effect 高效的 Chunk 结构
@@ -47,13 +47,14 @@ export const PolymarketHarvesterLive = Layer.effect(
             // 3. 判断终点：如果这一页数据为空，说明到底了，不返回 nextSeed
             if (page.length === 0) {
               // Option.none() 就是告诉流：工厂停工，流结束
+              yield * Effect.log("[PolymarketHarvester] 🛑 只能抓取这么多了") ;
               return [chunk, Option.none<number>()] as const;
             }
 
             // 4. 如果还有数据，算出下一页的 offset 传给流的下一次迭代
             const nextOffset = currentOffset + limit;
             return [chunk, Option.some(nextOffset)] as const;
-          })
+          }),
         );
       },
     };

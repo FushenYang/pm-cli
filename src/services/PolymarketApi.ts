@@ -39,7 +39,7 @@ export class PolymarketApi extends Context.Tag("PolymarketApi")<
     >;
   }
 >() {}
-
+const OFFSET_MAX = 10000;
 // 🌟 2. 实现这个契约的工业图层 (Layer)
 export const PolymarketApiLive = Layer.effect(
   PolymarketApi,
@@ -48,11 +48,14 @@ export const PolymarketApiLive = Layer.effect(
     const baseClient = yield* HttpClient.HttpClient;
 
     return {
+      // 最多只能翻页10000页
       fetchPage: (options?: FetchPageOptions) =>
         Effect.gen(function* () {
+
           const validated = yield* Schema.decodeUnknown(FetchPageOptionsSchema)(
             options ?? {},
           );
+          if (validated.offset >= OFFSET_MAX ) {return []}
           // A. 组装请求
           const req = HttpClientRequest.get(
             "https://gamma-api.polymarket.com/markets",
