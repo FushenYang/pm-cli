@@ -66,7 +66,14 @@ export const PolymarketApiLive = Layer.effect(
               limit: String(validated.limit),
               offset: String(validated.offset),
             }),
+            HttpClientRequest.setHeader("Accept", "application/json"),
             HttpClientRequest.setHeader("Accept-Encoding", "identity"),
+            HttpClientRequest.setHeader(
+              "User-Agent",
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            ),
+            // 强制断开连接：这是解决你 SocketError 的核心药方
+            HttpClientRequest.setHeader("Connection", "close"),
           );
 
           // B. 执行网络请求并解析 json
