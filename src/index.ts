@@ -3,9 +3,10 @@ import { FetchHttpClient, Path, FileSystem } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Stream } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive.js";
+import { makeLocalCsvSink } from "./infrastructure/LocalFileSink.js";
 
 import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
-import { marketListToCsv } from "./adapters/CsvPresenter.js";
+import { CSV_HEADER_ROW,marketToCsvRow } from "./adapters/MarketSummaryCsv.js";
 import {
   PolymarketHarvester,
   PolymarketHarvesterLive,
@@ -26,14 +27,14 @@ const syncSubCommand = Command.make(
         offset: 0,
       });
 
-      const csvContent = marketListToCsv(maybeMarkets);
+      const csvContent = maybeMarkets.map(marketToCsvRow).join("\n");
 
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const localDirPath = path.join(path.resolve("."), ".local");
       yield* fs.makeDirectory(localDirPath, { recursive: true });
-      const targetFilePath = path.join(localDirPath, "two.csv");
-      yield* fs.writeFileString(targetFilePath, csvContent);
+      const targetFilePath = path.join(localDirPath, "final.csv");
+      yield* fs.writeFileString(targetFilePath, CSV_HEADER_ROW + "\n" + csvContent);
 
       yield* Console.log("[pm-cli] 读取数据成功");
     }),
@@ -42,13 +43,21 @@ const syncSubCommand = Command.make(
 const allSubCommands = Command.make("all", {}, () =>
   Effect.gen(function* () {
     const polymarketService = yield* PolymarketHarvester;
-    const stream = polymarketService.fetchAll();
-    const collectedChunk = yield* Stream.runCollect(
-      stream.pipe(Stream.take(2)),
-    );
-    yield* Console.log(collectedChunk);
-
+    const rawStream = polymarketService.fetchAll();
     yield* Console.log(`测试一下全量抓取的命令...`);
+    const fs = yield * FileSystem.FileSystem;
+    const path = yield * Path.Path;
+    const localDirPath = path.join(path.resolve("."), ".local");
+    yield * fs.makeDirectory(localDirPath, { recursive: true });
+    const targetFilePath = path.join(localDirPath, "final.csv");
+
+    const rowStream = rawStream.pipe(Stream.map(marketToCsvRow));
+    const finalStream = Stream.make(CSV_HEADER_ROW).pipe(
+      Stream.concat(rowStream),
+    );
+    yield* Effect.logInfo("🚀 开始全量拉取并写入 CSV...");
+    yield* Stream.run(finalStream, makeLocalCsvSink(targetFilePath));
+    yield* Effect.logInfo(`✅ 抓取完成！数据已安全写入 ${targetFilePath}`);
   }),
 );
 

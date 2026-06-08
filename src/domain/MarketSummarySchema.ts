@@ -5,14 +5,16 @@ export const MarketSummarySchema = Schema.Struct({
   conditionId: Schema.String,
   slug: Schema.String,
   question: Schema.String,
-  groupItemTitle: Schema.String,
-  startDate: Schema.String,
-  endDate: Schema.String,
+  groupItemTitle: Schema.String.pipe(
+    Schema.optionalWith({ default: () => "" }),
+  ),
+  startDate: Schema.String.pipe(Schema.optionalWith({ default: () => "" })),
+  endDate: Schema.String.pipe(Schema.optionalWith({ default: () => "" })),
   active: Schema.Boolean,
   closed: Schema.Boolean,
-  volumeNum: Schema.Number,
-  liquidityNum: Schema.Number,
-  outcomePrices: Schema.String,
+  volumeNum: Schema.Number.pipe(Schema.optionalWith({ default: () => 0 })),
+  liquidityNum: Schema.Number.pipe(Schema.optionalWith({ default: () => 0 })),
+  outcomePrices: Schema.String.pipe(Schema.optionalWith({ default: () => "" })),
   clobTokenIds: Schema.String,
   // 🌟 魔法：自动把嵌套的 events 数组拍平为单根字符串
   events: Schema.transform(
