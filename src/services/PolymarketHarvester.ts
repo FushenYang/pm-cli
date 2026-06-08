@@ -37,9 +37,7 @@ export const PolymarketHarvesterLive = Layer.effect(
               active,
             });
 
-            Effect.log(
-              `[PolymarketHarvester] ✅ 当前offset: ${currentOffset} ,本接口只能获取这么多数据了`,
-            );
+            yield * Effect.log(`[PolymarketHarvester] ✅ offset: ${currentOffset} 抓取了 ${page.length} 条数据`)
 
             // 2. 将普通的原生数组转换为 Effect 高效的 Chunk 结构
             const chunk = Chunk.fromIterable(page);
