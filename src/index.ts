@@ -1,15 +1,9 @@
 import { Command } from "@effect/cli";
-import {
-  HttpClient,
-  HttpClientRequest,
-  FetchHttpClient,
-  Path,
-  FileSystem,
-} from "@effect/platform";
+import { FetchHttpClient, Path, FileSystem } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Console, Effect, Layer, Schema, Option, Stream } from "effect";
+import { Console, Effect, Stream } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive.js";
-import { type MarketSummary } from "./domain/MarketSummarySchema.js";
+
 import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
 import { marketListToCsv } from "./adapters/CsvPresenter.js";
 import {
@@ -31,11 +25,8 @@ const syncSubCommand = Command.make(
         limit: 100,
         offset: 0,
       });
-      if (Option.isNone(maybeMarkets)) {
-        yield* Console.log("数据读取完成");
-        return;
-      }
-      const csvContent = marketListToCsv(maybeMarkets.value);
+
+      const csvContent = marketListToCsv(maybeMarkets);
 
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

@@ -1,7 +1,9 @@
 // src/services/PolymarketHarvester.ts
-import { Context, Layer, Stream, Option, Array, Effect } from "effect";
-import { type HarvestOptions, PolymarketApi } from "./PolymarketApi.js";
+import { Context, Layer, Stream, Option, Effect, Chunk } from "effect";
+import { type FetchPageOptions, PolymarketApi } from "./PolymarketApi.js";
 import { type MarketSummary } from "../domain/MarketSummarySchema.js";
+
+export type HarvestOptions = Omit<FetchPageOptions, "limit" | "offset">;
 
 export class PolymarketHarvester extends Context.Tag("PolymarketHarvester")<
   PolymarketHarvester,
@@ -19,52 +21,39 @@ export const PolymarketHarvesterLive = Layer.effect(
 
     return {
       fetchAll: (options?: HarvestOptions) => {
-        type Seed = {
-          readonly offset: number;
-          readonly limit: number;
-          readonly active: "true" | "false";
-        };
-        type PageOutput = Option.Option<
-          Array.NonEmptyReadonlyArray<MarketSummary>
-        >;
-        type paginateReturn = readonly [PageOutput, Option.Option<Seed>];
+        // 提取固定参数，不需要放进 Seed 里传来传去
+        const limit = 100;
+        const active = options?.active ?? "true";
 
-        const initialSeed: Seed = {
-          offset: 0,
-          limit: 100,
-          active: options?.active ?? "true",
-        };
-
-        // 🌟 核心修正：使用一等公民异步翻页算子 Stream.paginateEffect！
-        // 它天生就是为了吃进一个返回 Effect 容器的迭代函数而设计的！
-        const chunkStream = Stream.paginateEffect(initialSeed, (currentSeed) =>
+        // 🌟 核心修正：使用 Stream.paginateChunkEffect
+        // 它期待你每次返回一个 Chunk（数据块），然后它会自动在底层帮你打平成逐个发出的 Stream
+        // 这里的 Seed 极度简化：只需要记录当前的 offset 即可（初始值为 0）
+        return Stream.paginateChunkEffect(0, (currentOffset) =>
           Effect.gen(function* () {
-            const maybePage = yield* api.fetchPage(currentSeed);
+            // 1. 调用底层 API（现在的 API 直接返回 ReadonlyArray）
+            const page = yield* api.fetchPage({
+              offset: currentOffset,
+              limit,
+              active,
+            });
 
-            if (Option.isNone(maybePage)) {
-              return [maybePage, Option.none<Seed>()] as paginateReturn;
-            }
             yield* Effect.log(
-              `[PolymarketHarvester] ✅ 当前offset: ${currentSeed.offset} ,获取了 ${maybePage.value.length} 条数据`,
+              `[PolymarketHarvester] ✅ 当前offset: ${currentOffset} ,获取了 ${page.length} 条数据`
             );
-            const nextSeed: Seed = {
-              ...currentSeed,
-              offset: currentSeed.offset + currentSeed.limit,
-            };
 
-            return [maybePage, Option.some(nextSeed)] as paginateReturn;
-          }),
-        );
+            // 2. 将普通的原生数组转换为 Effect 高效的 Chunk 结构
+            const chunk = Chunk.fromIterable(page);
 
-        return chunkStream.pipe(
-          Stream.map((maybePage) =>
-            Option.match(maybePage, {
-              onNone: () => Array.empty<MarketSummary>(),
-              onSome: (page) => page,
-            }),
-          ),
-          Stream.flatMap(Stream.fromIterable),
-          Stream.orDie,
+            // 3. 判断终点：如果这一页数据为空，说明到底了，不返回 nextSeed
+            if (page.length === 0) {
+              // Option.none() 就是告诉流：工厂停工，流结束
+              return [chunk, Option.none<number>()] as const;
+            }
+
+            // 4. 如果还有数据，算出下一页的 offset 传给流的下一次迭代
+            const nextOffset = currentOffset + limit;
+            return [chunk, Option.some(nextOffset)] as const;
+          })
         );
       },
     };

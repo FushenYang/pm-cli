@@ -2,10 +2,13 @@ import { Array } from "effect";
 import type { MarketSummary } from "../domain/MarketSummarySchema.js";
 
 export const marketListToCsv = (
-  markets: Array.NonEmptyReadonlyArray<MarketSummary>,
+  markets: ReadonlyArray<MarketSummary>,
 ): string => {
   // 1. 抓取第一条数据作为 CSV 提取表头的绝对依据
   const firstMarket = markets[0];
+  if (!firstMarket) {
+    return "";
+  }
   const headers = Object.keys(firstMarket).join(",");
 
   // 2. 折衷版单元格转义手術刀（顺从你的当前折衷心智，不加多余逻辑）
