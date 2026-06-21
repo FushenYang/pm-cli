@@ -1,3 +1,17 @@
 {
-    "dependi.npm.lockFileEnabled": false
+  "dependi.npm.lockFileEnabled": false,
+  "ts.preferences.autoImportFileExcludePatterns": ["repos/**"],
+  "js.preferences.autoImportFileExcludePatterns": ["repos/**"],
+
+  "files.exclude": {
+    "repos/**": true
+  },
+
+  "files.watcherExclude": {
+    "repos/**": true
+  },
+
+  "search.exclude": {
+    "repos/**": true
+  }
 }
