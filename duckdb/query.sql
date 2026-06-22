@@ -4,7 +4,7 @@
 --LIMIT 20;
 -- query.sql
 -- 确保开启必要的安全及高级网络选项
-SET s3_use_ssl=true;
+-- SET s3_use_ssl=true;
 
 -- 使用 COPY 语法将查询流直接导出到本地物理文件
 -- COPY (
@@ -22,14 +22,17 @@ SET s3_use_ssl=true;
 -- ) TO 'asset_100047_output.csv' WITH (HEADER 1, DELIMITER ',');
 
 -- 统计全量 R2 桶里，成交笔数最多、涉及资金最大的明星资产
-COPY (
-SELECT
-    asset,
-    COUNT(*) as trade_count,                             -- 总成交笔数
-    ROUND(SUM(amount_usdc)) as total_volume_usdc,         -- 总成交额 (USDC)
-    MIN(price) as min_price,                             -- 历史最低价
-    MAX(price) as max_price                              -- 历史最高价
-FROM 's3://polymarket-cold-data/polymarket-cold-data/polymarket/order_filled/asset=112998834930140849739317686306046962022222428099467375077336504369963794934957/*.parquet'
-GROUP BY asset
-ORDER BY trade_count DESC
-LIMIT 10) TO 'us-x-iran-permanent-peace-deal-by-no.csv' WITH (HEADER 1, DELIMITER ',');
+-- COPY (
+-- SELECT
+--     asset,
+--     COUNT(*) as trade_count,                             -- 总成交笔数
+--     ROUND(SUM(amount_usdc)) as total_volume_usdc,         -- 总成交额 (USDC)
+--     MIN(price) as min_price,                             -- 历史最低价
+--     MAX(price) as max_price                              -- 历史最高价
+-- FROM 's3://polymarket-cold-data/polymarket-cold-data/polymarket/order_filled/asset=112998834930140849739317686306046962022222428099467375077336504369963794934957/*.parquet'
+-- GROUP BY asset
+-- ORDER BY trade_count DESC
+-- LIMIT 10) TO 'us-x-iran-permanent-peace-deal-by-no.csv' WITH (HEADER 1, DELIMITER ',');
+
+
+select count(*) from read_json_auto('.local/maker-*.jsonl');

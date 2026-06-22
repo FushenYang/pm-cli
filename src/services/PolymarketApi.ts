@@ -61,6 +61,7 @@ export const PolymarketApiLive = Layer.effect(
               closed: "false",
               limit: String(validated.limit),
               offset: String(validated.offset),
+              tag_slug: "politics",
               order: "volume24hr",
               ascending: "false",
             }),

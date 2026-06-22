@@ -12,6 +12,7 @@ export const MarketSummarySchema = Schema.Struct({
   endDate: Schema.String.pipe(Schema.optionalWith({ default: () => "" })),
   active: Schema.Boolean,
   closed: Schema.Boolean,
+  volume24hr: Schema.Number,
   volumeNum: Schema.Number.pipe(Schema.optionalWith({ default: () => 0 })),
   liquidityNum: Schema.Number.pipe(Schema.optionalWith({ default: () => 0 })),
   outcomePrices: Schema.String.pipe(Schema.optionalWith({ default: () => "" })),

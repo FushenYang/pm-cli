@@ -6,8 +6,8 @@ import { NetworkLive } from "./infrastructure/NetworkLive.js";
 import { LocalStorageLive } from "./infrastructure/LocalStorageLive.js";
 
 import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
-import { CSV_HEADER_ROW,marketToCsvRow } from "./adapters/MarketSummaryCsv.js";
-import {Storage} from "./infrastructure/Storage.js";
+import { CSV_HEADER_ROW, marketToCsvRow } from "./adapters/MarketSummaryCsv.js";
+import { Storage } from "./infrastructure/Storage.js";
 import {
   PolymarketHarvester,
   PolymarketHarvesterLive,
@@ -35,7 +35,10 @@ const syncSubCommand = Command.make(
       const localDirPath = path.join(path.resolve("."), ".local");
       yield* fs.makeDirectory(localDirPath, { recursive: true });
       const targetFilePath = path.join(localDirPath, "final.csv");
-      yield* fs.writeFileString(targetFilePath, CSV_HEADER_ROW + "\n" + csvContent);
+      yield* fs.writeFileString(
+        targetFilePath,
+        CSV_HEADER_ROW + "\n" + csvContent,
+      );
 
       yield* Console.log("[pm-cli] 读取数据成功");
     }),
@@ -48,12 +51,18 @@ const allSubCommands = Command.make("all", {}, () =>
     yield* Effect.log(`抓取市场最新信息...`);
     const storage = yield* Storage;
     const rowStream = rawStream.pipe(
-      Stream.take(500),
+      Stream.filter(
+        (market) =>
+          !market.slug.includes("fifa") && !market.slug.includes("fifwc"),
+      ),
+      Stream.take(50),
       Stream.map(JSON.stringify),
       Stream.intersperse("\n"),
-      Stream.encodeText
+      Stream.encodeText,
     );
-    const filename = yield* storage.writeStream("maker", rowStream, { ext: "jsonl" });
+    const filename = yield* storage.writeStream("maker", rowStream, {
+      ext: "jsonl",
+    });
     yield* Effect.logInfo(`✅ 抓取完成！数据已安全写入 ${filename}`);
   }),
 );
