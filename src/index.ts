@@ -49,11 +49,11 @@ const allSubCommands = Command.make("all", {}, () =>
     const storage = yield* Storage;
     const rowStream = rawStream.pipe(
       Stream.take(500),
-      Stream.map(marketToCsvRow));
-    const finalStream = Stream.make(CSV_HEADER_ROW + "\n").pipe(
-      Stream.concat(rowStream),
-    ).pipe(Stream.encodeText);
-    const filename = yield* storage.writeStream("maker", finalStream);
+      Stream.map(JSON.stringify),
+      Stream.intersperse("\n"),
+      Stream.encodeText
+    );
+    const filename = yield* storage.writeStream("maker", rowStream, { ext: "jsonl" });
     yield* Effect.logInfo(`✅ 抓取完成！数据已安全写入 ${filename}`);
   }),
 );
