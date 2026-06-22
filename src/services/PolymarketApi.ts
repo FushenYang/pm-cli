@@ -24,7 +24,6 @@ export type FetchPageOptions = Schema.Schema.Encoded<
   typeof FetchPageOptionsSchema
 >;
 
-
 // 🌟 1. 铸造高贵的“服务契约标签 (Service Tag)”
 // 对外宣告：我是一个专门负责向 Polymarket 索要数据的核心服务
 export class PolymarketApi extends Context.Tag("PolymarketApi")<
@@ -32,11 +31,7 @@ export class PolymarketApi extends Context.Tag("PolymarketApi")<
   {
     readonly fetchPage: (
       options?: FetchPageOptions,
-    ) => Effect.Effect<
-      ReadonlyArray<MarketSummary>,
-      never,
-      never
-    >;
+    ) => Effect.Effect<ReadonlyArray<MarketSummary>, never, never>;
   }
 >() {}
 const OFFSET_MAX = 10000;
@@ -51,11 +46,12 @@ export const PolymarketApiLive = Layer.effect(
       // 最多只能翻页10000页
       fetchPage: (options?: FetchPageOptions) =>
         Effect.gen(function* () {
-
           const validated = yield* Schema.decodeUnknown(FetchPageOptionsSchema)(
             options ?? {},
           );
-          if (validated.offset >= OFFSET_MAX ) {return []}
+          if (validated.offset >= OFFSET_MAX) {
+            return [];
+          }
           // A. 组装请求
           const req = HttpClientRequest.get(
             "https://gamma-api.polymarket.com/markets",
@@ -65,6 +61,8 @@ export const PolymarketApiLive = Layer.effect(
               closed: "false",
               limit: String(validated.limit),
               offset: String(validated.offset),
+              order: "volume24hr",
+              ascending: "false",
             }),
             HttpClientRequest.setHeader("Accept", "application/json"),
             HttpClientRequest.setHeader("Accept-Encoding", "identity"),
@@ -73,7 +71,7 @@ export const PolymarketApiLive = Layer.effect(
               "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
             ),
             // 强制断开连接：这是解决你 SocketError 的核心药方
-            HttpClientRequest.setHeader("Connection", "close"),
+            //HttpClientRequest.setHeader("Connection", "close"),
           );
 
           // B. 执行网络请求并解析 json
