@@ -1,6 +1,13 @@
 # pm-cli
 
 
+## 命令正常使用
+
+``` bash
+
+pnpm dev all
+```
+
 ## agent相关
 
 本项目使用了effect.ts，需要时可以更新源代码供ai参考

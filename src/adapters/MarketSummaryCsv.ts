@@ -12,5 +12,5 @@ export const CSV_HEADER_ROW = CSV_HEADERS.join(",");
 // 2. 纯粹的 Body 转换函数（不包含表头，不包含末尾换行符）
 export const marketToCsvRow = (market: MarketSummary): string => {
   const escapeCsv = (val: unknown) => `"${String(val ?? "").replace(/"/g, '""')}"`;
-  return CSV_HEADERS.map((key) => escapeCsv(market[key])).join(",");
+  return CSV_HEADERS.map((key) => escapeCsv(market[key])).join(",") + "\n";
 };

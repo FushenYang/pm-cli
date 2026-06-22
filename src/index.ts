@@ -3,10 +3,11 @@ import { FetchHttpClient, Path, FileSystem } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Stream } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive.js";
-import { makeLocalCsvSink } from "./infrastructure/LocalFileSink.js";
+import { LocalStorageLive } from "./infrastructure/LocalStorageLive.js";
 
 import { PolymarketApi, PolymarketApiLive } from "./services/PolymarketApi.js";
 import { CSV_HEADER_ROW,marketToCsvRow } from "./adapters/MarketSummaryCsv.js";
+import {Storage} from "./infrastructure/Storage.js";
 import {
   PolymarketHarvester,
   PolymarketHarvesterLive,
@@ -44,20 +45,16 @@ const allSubCommands = Command.make("all", {}, () =>
   Effect.gen(function* () {
     const polymarketService = yield* PolymarketHarvester;
     const rawStream = polymarketService.fetchAll();
-    yield* Console.log(`测试一下全量抓取的命令...`);
-    const fs = yield * FileSystem.FileSystem;
-    const path = yield * Path.Path;
-    const localDirPath = path.join(path.resolve("."), ".local");
-    yield * fs.makeDirectory(localDirPath, { recursive: true });
-    const targetFilePath = path.join(localDirPath, "final.csv");
-
-    const rowStream = rawStream.pipe(Stream.map(marketToCsvRow));
-    const finalStream = Stream.make(CSV_HEADER_ROW).pipe(
+    yield* Effect.log(`抓取市场最新信息...`);
+    const storage = yield* Storage;
+    const rowStream = rawStream.pipe(
+      Stream.take(500),
+      Stream.map(marketToCsvRow));
+    const finalStream = Stream.make(CSV_HEADER_ROW + "\n").pipe(
       Stream.concat(rowStream),
-    );
-    yield* Effect.logInfo("🚀 开始全量拉取并写入 CSV...");
-    yield* Stream.run(finalStream, makeLocalCsvSink(targetFilePath));
-    yield* Effect.logInfo(`✅ 抓取完成！数据已安全写入 ${targetFilePath}`);
+    ).pipe(Stream.encodeText);
+    const filename = yield* storage.writeStream("maker", finalStream);
+    yield* Effect.logInfo(`✅ 抓取完成！数据已安全写入 ${filename}`);
   }),
 );
 
@@ -76,6 +73,7 @@ const cli = Command.run(rootCommand, {
 cli(process.argv).pipe(
   Effect.provide(PolymarketHarvesterLive),
   Effect.provide(PolymarketApiLive),
+  Effect.provide(LocalStorageLive),
   Effect.provide(NodeContext.layer),
   Effect.provide(FetchHttpClient.layer),
   Effect.provide(NetworkLive),
