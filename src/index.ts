@@ -9,9 +9,10 @@ import { PolymarketApiLive } from "./services/PolymarketApi";
 import { PolymarketHarvesterLive } from "./services/PolymarketHarvester";
 import { syncSubCommand } from "./commands/sync";
 import { allSubCommands } from "./commands/all";
+import { wsSubCommands } from "./commands/ws";
 
 const rootCommand = Command.make("pm").pipe(
-  Command.withSubcommands([syncSubCommand, allSubCommands]),
+  Command.withSubcommands([syncSubCommand, allSubCommands, wsSubCommands]),
 );
 
 // 2. 将命令打包为标准的 CLI 应用程序

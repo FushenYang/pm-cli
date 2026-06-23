@@ -1,6 +1,6 @@
 import { Effect, Layer, Option } from "effect";
 import { setGlobalDispatcher, ProxyAgent } from "undici";
-import { AppConfig, ConfigLive } from "./ConfigLive.js";
+import { AppConfig, ConfigLive } from "./ConfigLive";
 
 const UndiciProxyInitLive = Layer.effectDiscard(
   Effect.gen(function* () {

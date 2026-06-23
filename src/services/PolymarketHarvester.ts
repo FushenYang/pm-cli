@@ -1,7 +1,7 @@
 // src/services/PolymarketHarvester.ts
 import { Context, Layer, Stream, Option, Effect, Chunk } from "effect";
-import { type FetchPageOptions, PolymarketApi } from "./PolymarketApi.js";
-import { type MarketSummary } from "../domain/MarketSummarySchema.js";
+import { type FetchPageOptions, PolymarketApi } from "./PolymarketApi";
+import { type MarketSummary } from "../domain/MarketSummarySchema";
 
 export type HarvestOptions = Omit<FetchPageOptions, "limit" | "offset">;
 
@@ -37,7 +37,9 @@ export const PolymarketHarvesterLive = Layer.effect(
               active,
             });
 
-            yield * Effect.log(`[PolymarketHarvester] ✅ offset: ${currentOffset} 抓取了 ${page.length} 条数据`)
+            yield* Effect.log(
+              `[PolymarketHarvester] ✅ offset: ${currentOffset} 抓取了 ${page.length} 条数据`,
+            );
 
             // 2. 将普通的原生数组转换为 Effect 高效的 Chunk 结构
             const chunk = Chunk.fromIterable(page);
@@ -45,7 +47,7 @@ export const PolymarketHarvesterLive = Layer.effect(
             // 3. 判断终点：如果这一页数据为空，说明到底了，不返回 nextSeed
             if (page.length === 0) {
               // Option.none() 就是告诉流：工厂停工，流结束
-              yield * Effect.log("[PolymarketHarvester] 🛑 只能抓取这么多了") ;
+              yield* Effect.log("[PolymarketHarvester] 🛑 只能抓取这么多了");
               return [chunk, Option.none<number>()] as const;
             }
 

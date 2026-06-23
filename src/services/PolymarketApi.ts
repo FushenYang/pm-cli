@@ -4,7 +4,7 @@ import { Context, Effect, Layer, Option, Schema, Array } from "effect";
 import {
   type MarketSummary,
   MarketSummarySchema,
-} from "../domain/MarketSummarySchema.js";
+} from "../domain/MarketSummarySchema";
 
 export const FetchPageOptionsSchema = Schema.Struct({
   // limit 必须是整数，且范围严格锁定在 1 到 100 之间。默认值为 100

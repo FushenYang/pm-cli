@@ -2,10 +2,7 @@ import { Command } from "@effect/cli";
 import { Path, FileSystem } from "@effect/platform";
 import { PolymarketApi } from "../services/PolymarketApi";
 import { Effect } from "effect";
-import {
-  CSV_HEADER_ROW,
-  marketToCsvRow,
-} from "../adapters/MarketSummaryCsv.js";
+import { CSV_HEADER_ROW, marketToCsvRow } from "../adapters/MarketSummaryCsv";
 
 export const syncSubCommand = Command.make(
   "sync",
