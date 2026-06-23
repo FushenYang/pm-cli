@@ -7,7 +7,8 @@
   "module": "ECMAScript",
   "scripts": {
     "test": "vitest",
-    "dev": "NODE_OPTIONS='--no-deprecation' tsx src/index.ts"
+    "dev": "NODE_OPTIONS='--no-deprecation' tsx src/index.ts",
+    "db": "bash ./duckdb/duck.sh"
   },
   "keywords": [],
   "author": "",
