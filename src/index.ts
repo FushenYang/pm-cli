@@ -1,5 +1,5 @@
 import { Command } from "@effect/cli";
-import { FetchHttpClient } from "@effect/platform";
+import { FetchHttpClient, Socket } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Effect } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive";
@@ -29,5 +29,6 @@ cli(process.argv).pipe(
   Effect.provide(NodeContext.layer),
   Effect.provide(FetchHttpClient.layer),
   Effect.provide(NetworkLive),
+  Effect.provide(Socket.layerWebSocketConstructorGlobal),
   NodeRuntime.runMain,
 );

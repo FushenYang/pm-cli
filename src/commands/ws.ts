@@ -17,7 +17,7 @@ export const wsSubCommands = Command.make("ws", {}, () =>
   Effect.gen(function* () {
     yield* Effect.logInfo(`🔌 正在初始化 Polymarket WebSocket 管道...`);
 
-    // 1. 创建 WebSocket 实例，显式加上 5 秒超时控制！防止无限挂死
+    // 1. 创建 WebSocket 实例，显式加上 5 秒超时控制
     const wsConnection = yield* Socket.makeWebSocket(POLYMARKET_WS_URL, {
       openTimeout: Duration.seconds(5),
     });
@@ -26,27 +26,23 @@ export const wsSubCommands = Command.make("ws", {}, () =>
 
     const messageProcessor = Stream.fromQueue(messageQueue).pipe(
       Stream.take(10),
-      Stream.tap((msg) => Console.log(`📥 成功拦截流出数据:\n${msg}\n`)),
+      Stream.tap((msg) => Console.log(`📥 成功拦截实时流出数据:\n${msg}\n`)),
       Stream.runDrain,
     );
 
     yield* Effect.gen(function* () {
-      yield* Effect.logInfo("📡 正在激活底层数据网络泵...");
+      // 💡 核心解药 1：把获取 writer 提到最外层（绑定当前作用域的 Scope），消灭 TS 报错
+      const write = yield* wsConnection.writer;
 
-      // 2. 💡 破局核心：把获取 writer 和发送载荷的动作，全部挪进 runRaw 已经就绪的 onOpen 内部
+      // 2. 此时 onOpenAction 内部无任何 Scope 依赖，完美契合标准
       const onOpenAction = Effect.gen(function* () {
         yield* Effect.logInfo(
-          "🔥 [连接成功] 物理网络已通！正在现场获取写入契约...",
+          "🔥 [连接成功] 物理网络已通！开始倾倒订阅载荷...",
         );
-
-        // 此时物理长连接已开，yield* writer 会瞬间秒回，绝不阻塞！
-        const write = yield* wsConnection.writer;
-
-        yield* Effect.logInfo("📤 正在向远端管道倾倒订阅载荷...");
         yield* write(JSON.stringify(SUBSCRIBE_PAYLOAD));
         yield* Effect.logInfo("✅ 订阅请求已安全打入！");
 
-        // 在这里安全地启动心跳
+        // 安全启动心跳
         yield* Effect.gen(function* () {
           yield* write("PING");
           yield* Effect.logDebug("💓 发送 PING 心跳...");
@@ -57,8 +53,8 @@ export const wsSubCommands = Command.make("ws", {}, () =>
         ),
       );
 
-      // 3. 让接收泵在后台欢快地奔跑
-      yield* wsConnection
+      // 3. 构建底层网络接收泵
+      const networkPump = wsConnection
         .runRaw(
           (msg) =>
             Queue.offer(
@@ -68,18 +64,20 @@ export const wsSubCommands = Command.make("ws", {}, () =>
           { onOpen: onOpenAction },
         )
         .pipe(
-          // 如果 5 秒内连 TCP 握手都做不完，直接抛错清醒过来，不要死等
-          Effect.timeout(Duration.seconds(5)),
-          Effect.catchAll((err) =>
-            Effect.logError(`⚠️ 物理连接或网络泵运行遭遇异常/超时: ${err}`),
-          ),
-          Effect.fork,
+          // 如果 5 秒内无法建立物理握手或网络断开，强制抛出错误让主流程知情
+          Effect.timeoutFail({
+            onTimeout: () => new Error("WebSocket 连接或握手在 5 秒内超时！"),
+            duration: Duration.seconds(5),
+          }),
         );
 
-      yield* Effect.logInfo(
-        "⏳ 流量接收阀门已全开，开始阻塞等待前 10 条热门数据...",
-      );
-      yield* messageProcessor;
+      yield* Effect.logInfo("📡 正在并发激活 [网络接收泵] 与 [流处理器]...");
+
+      // 💡 核心解药 2：用 Effect.all 并发结对运行它们！
+      // 只要 networkPump 发生超时死亡，整个 Effect 块会立刻中断并把报错吐在终端，绝不傻等！
+      yield* Effect.all([networkPump, messageProcessor], {
+        concurrency: "unbounded",
+      });
     }).pipe(Effect.scoped);
 
     yield* Effect.logInfo(`🎉 10条热门数据抓取完毕，连接已安全自动释放！`);
