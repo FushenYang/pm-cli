@@ -35,4 +35,9 @@
 -- LIMIT 10) TO 'us-x-iran-permanent-peace-deal-by-no.csv' WITH (HEADER 1, DELIMITER ',');
 
 
-select count(*) from read_json_auto('.local/maker-*.jsonl');
+--select count(*) from read_json_auto('.local/maker-*.jsonl');
+
+
+-- select count(*) from read_json_auto('.local/next-leader-out-of-power-before-2027-no-orban.json');
+
+select markets->slug as slug from read_json_auto('.local/next-leader-out-of-power-before-2027-no-orban.json');

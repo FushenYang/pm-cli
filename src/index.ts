@@ -60,7 +60,7 @@ const allSubCommands = Command.make("all", {}, () =>
       Stream.intersperse("\n"),
       Stream.encodeText,
     );
-    const filename = yield* storage.writeStream("maker", rowStream, {
+    const filename = yield* storage.writeStream("market", rowStream, {
       ext: "jsonl",
     });
     yield* Effect.logInfo(`✅ 抓取完成！数据已安全写入 ${filename}`);
