@@ -1,7 +1,7 @@
 import { Layer, Effect, Clock, Stream } from "effect";
 import { FileSystem } from "@effect/platform/FileSystem";
 import { Path } from "@effect/platform/Path";
-import { Storage } from "./Storage";
+import { Storage } from "../services/Storage";
 
 export const LocalStorageLive = Layer.effect(
   Storage,

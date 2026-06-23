@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect, Stream } from "effect";
 import { PolymarketHarvester } from "../services/PolymarketHarvester";
-import { Storage } from "../infrastructure/Storage";
+import { Storage } from "../services/Storage";
 
 export const allSubCommands = Command.make("all", {}, () =>
   Effect.gen(function* () {
