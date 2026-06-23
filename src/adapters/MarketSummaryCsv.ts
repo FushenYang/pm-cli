@@ -1,4 +1,4 @@
-import type { MarketSummary } from "../domain/MarketSummarySchema.js";
+import type { MarketSummary } from "../domain/MarketSummarySchema";
 
 // 1. 独立导出表头，作为常量备用
 export const CSV_HEADERS: ReadonlyArray<keyof MarketSummary> = [

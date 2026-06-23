@@ -1,6 +1,6 @@
 import { Stream } from "effect";
-import { type MarketSummary } from "../domain/MarketSummarySchema.js";
-import { marketToCsvRow } from "./MarketSummaryCsv.js";
+import { type MarketSummary } from "../domain/MarketSummarySchema";
+import { marketToCsvRow } from "./MarketSummaryCsv";
 
 export const MarketEncoders = {
   // 转换为 JSONL 字节流

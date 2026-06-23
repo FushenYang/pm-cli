@@ -8,7 +8,7 @@ export interface Storage {
   readonly writeStream: (
     key: string,
     byteStream: Stream.Stream<Uint8Array, Error, never>,
-    options?: { dir?: string; ext?: string }
+    options?: { dir?: string; ext?: string },
   ) => Effect.Effect<string, Error, never>;
 }
 
