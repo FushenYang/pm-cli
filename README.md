@@ -3,6 +3,8 @@
 
 ## 命令正常使用
 
+
+这是下载所有数据的的自命令。
 ``` bash
 
 pnpm dev all
@@ -23,3 +25,17 @@ git subtree pull --prefix=repos/effect https://github.com/Effect-TS/effect.git m
 ```
 
 另外，因为配置的目录忽略，所以vs正常看不到repos目录，但是agent.md会提醒copilot。
+
+# duckdb使用技巧
+
+## 加载环境变量
+
+`export $(cat .env | xargs)`
+
+
+## 运行方式
+
+改进了运行方式，以下两种方式都是可以的。添加参数会找到对应的脚本，不添加参数系统会自己找最新的修改。
+`pnpm db`
+`pnpm db query`
+
