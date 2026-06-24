@@ -10,6 +10,8 @@ import {
   Deferred,
 } from "effect";
 
+import {Storage} from "../services/Storage";
+
 const POLYMARKET_WS_URL =
   "wss://ws-subscriptions-clob.polymarket.com/ws/market";
 
@@ -112,13 +114,20 @@ export const wsSubCommands = Command.make("ws", {}, () =>
       controlQueue,
       isSocketOpen,
     );
-
+    const storage = yield* Storage;
     const messageProcessor = Stream.fromQueue(messageQueue).pipe(
-      Stream.take(5),
-      Stream.tap((msg) =>
-        Console.log(`📥 拦截流出数据:\n${msg.slice(0, 100)}...\n`),
+      Stream.map((msg) => msg.trim()),
+      Stream.filter((msg) => msg !== "" && msg !== "PONG" && msg !== "[]"),
+      Stream.take(500),
+      Stream.zip(Stream.iterate(1, (n) => n + 1)),
+      Stream.tap(([msg, count]) =>
+        Effect.log(`📥 [${count}/500] 拦截流出数据: ${msg.slice(0, 100)}...`),
       ),
-      Stream.runDrain,
+      Stream.map(([msg]) => msg),
+      Stream.tap((msg) =>
+        Effect.log(`📥 拦截流出数据:${msg.slice(0, 100)}...`),
+      ),
+      Stream.run(storage.makeJsonlSink("polymarket_raw")),
     );
 
     yield* Effect.logInfo("📡 正在将网络基础设施挂载到后台...");
@@ -134,6 +143,6 @@ export const wsSubCommands = Command.make("ws", {}, () =>
 
   }).pipe(
     Effect.scoped,
-    Effect.andThen(Effect.logInfo(`🎉 5条数据抓取完毕，资源已全部安全释放！`)),
+    Effect.andThen(Effect.logInfo(`🎉 500条数据抓取完毕,资源已全部安全释放！`)),
   ),
 );
