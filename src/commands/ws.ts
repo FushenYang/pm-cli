@@ -1,27 +1,11 @@
 import { Command } from "@effect/cli";
 import { Socket } from "@effect/platform";
-import {
-  Console,
-  Effect,
-  Queue,
-  Schedule,
-  Stream,
-  Duration,
-  Deferred,
-} from "effect";
+import { Effect, Queue, Schedule, Stream, Duration, Deferred } from "effect";
 
-import {Storage} from "../services/Storage";
+import { Storage } from "../services/Storage";
 
 const POLYMARKET_WS_URL =
   "wss://ws-subscriptions-clob.polymarket.com/ws/market";
-
-const SUBSCRIBE_PAYLOAD = {
-  type: "market",
-  assets_ids: [
-    "85367286745806857961178482075931972831841231758328346969840810630055458089640",
-  ],
-  custom_feature_enabled: true,
-};
 
 const createHeartbeatPump = (
   controlQueue: Queue.Enqueue<string>,
@@ -31,7 +15,7 @@ const createHeartbeatPump = (
     yield* Deferred.await(isSocketOpen);
     yield* Effect.logInfo("心跳泵已激活，准备工作...");
     const pingAction = Queue.offer(controlQueue, "PING").pipe(
-      Effect.tap(() => Effect.logDebug("投递 PING 心跳...")),
+      Effect.tap(() => Effect.logInfo("投递 PING 心跳...")),
     );
     yield* pingAction.pipe(Effect.repeat(Schedule.spaced("10 seconds")));
   });
@@ -47,47 +31,44 @@ const createSenderPump = (
 
 const createDynamicStrategy = (controlQueue: Queue.Enqueue<string>) =>
   Effect.gen(function* () {
-    yield* Effect.sleep("4 seconds");
-    yield* Effect.logInfo("🚨 [策略触发] 运行 4 秒后，动态追加新市场订阅！");
+    yield* Effect.logInfo("🚨 添加订阅");
     yield* Queue.offer(
       controlQueue,
       JSON.stringify({
         operation: "subscribe",
         assets_ids: [
-          "21742633143463906290569050155826241533067272736897614950488156847949938836455",
+          "85367286745806857961178482075931972831841231758328346969840810630055458089640",
         ],
         custom_feature_enabled: true,
       }),
     );
   });
 
-const createNetworkPump = (
+export const createNetworkPump = (
   wsConnection: Socket.Socket,
-  messageQueue: Queue.Enqueue<string>, // 💡 只写权限：只能往收件箱塞
-  controlQueue: Queue.Enqueue<string>,
+  messageQueue: Queue.Enqueue<string>,
   isSocketOpen: Deferred.Deferred<void, never>,
-) =>
-  wsConnection.runRaw(
-    (msg) =>
-      Queue.offer(
-        messageQueue,
-        typeof msg === "string" ? msg : new TextDecoder().decode(msg),
-      ),
-    {
-      // 极其干净的开门动作
-      onOpen: Effect.gen(function* () {
-        yield* Effect.logInfo("🔥 [连接成功] 物理网络已通，解开状态锁！");
-        // 1. 开锁！唤醒外面的心跳泵
-        yield* Deferred.succeed(isSocketOpen, void 0);
+): Effect.Effect<void, Socket.SocketError, never> => {
+  const textDecoder = new TextDecoder();
 
-        // 2. 投递初始订阅
-        yield* Effect.logInfo("🔥 把初始订阅载荷投递到发件箱...");
-        yield* Queue.offer(controlQueue, JSON.stringify(SUBSCRIBE_PAYLOAD));
-      }).pipe(
-        Effect.catchAll((err) => Effect.logError(`❌ 初始化失败: ${err}`)),
-      ),
+  // 1. 严格死守 Socket 接口定义的契约签名
+  // run 方法专门接收 (chunk: Uint8Array) => Effect
+  return wsConnection.run(
+    (chunk) =>
+      Effect.gen(function* () {
+        // 2. 纯净的数据解码与投递，利用 Effect 的管道流转
+        const decoded = textDecoder.decode(chunk);
+        yield* Queue.offer(messageQueue, decoded);
+      }),
+    {
+      // 3. 严格遵循接口，在这里极其干净地解开你的状态锁
+      onOpen: Effect.gen(function* () {
+        yield* Effect.logInfo("🔥 [连接成功] 声明式网络流已通电，解开状态锁！");
+        yield* Deferred.succeed(isSocketOpen, void 0);
+      }),
     },
   );
+};
 
 export const wsSubCommands = Command.make("ws", {}, () =>
   Effect.gen(function* () {
@@ -111,23 +92,19 @@ export const wsSubCommands = Command.make("ws", {}, () =>
     const networkPump = createNetworkPump(
       wsConnection,
       messageQueue,
-      controlQueue,
       isSocketOpen,
     );
     const storage = yield* Storage;
     const messageProcessor = Stream.fromQueue(messageQueue).pipe(
       Stream.map((msg) => msg.trim()),
       Stream.filter((msg) => msg !== "" && msg !== "PONG" && msg !== "[]"),
-      Stream.take(500),
+      Stream.take(50),
       Stream.zip(Stream.iterate(1, (n) => n + 1)),
       Stream.tap(([msg, count]) =>
-        Effect.log(`📥 [${count}/500] 拦截流出数据: ${msg.slice(0, 100)}...`),
+        Effect.log(`📥 [${count}/50] 拦截流出数据: ${msg.slice(0, 100)}...`),
       ),
       Stream.map(([msg]) => msg),
-      Stream.tap((msg) =>
-        Effect.log(`📥 拦截流出数据:${msg.slice(0, 100)}...`),
-      ),
-      Stream.run(storage.makeJsonlSink("polymarket_raw")),
+      Stream.run(storage.makeJsonlSink("orderbook")),
     );
 
     yield* Effect.logInfo("📡 正在将网络基础设施挂载到后台...");
@@ -140,9 +117,8 @@ export const wsSubCommands = Command.make("ws", {}, () =>
     yield* Effect.logInfo("🎯 前台主业务开始阻塞拦截数据...");
 
     yield* messageProcessor;
-
   }).pipe(
     Effect.scoped,
-    Effect.andThen(Effect.logInfo(`🎉 500条数据抓取完毕,资源已全部安全释放！`)),
+    Effect.andThen(Effect.logInfo(`🎉 50条数据抓取完毕,资源已全部安全释放！`)),
   ),
 );
