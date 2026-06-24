@@ -25,7 +25,7 @@ const createSenderPump = (
   write: (chunk: string) => Effect.Effect<void, Socket.SocketError>,
 ) =>
   Queue.take(controlQueue).pipe(
-    Effect.flatMap((msg) => write(msg)),
+    Effect.flatMap(write),
     Effect.forever, // 永动机
   );
 
@@ -50,22 +50,11 @@ export const createNetworkPump = (
   isSocketOpen: Deferred.Deferred<void, never>,
 ): Effect.Effect<void, Socket.SocketError, never> => {
   const textDecoder = new TextDecoder();
-
-  // 1. 严格死守 Socket 接口定义的契约签名
-  // run 方法专门接收 (chunk: Uint8Array) => Effect
   return wsConnection.run(
-    (chunk) =>
-      Effect.gen(function* () {
-        // 2. 纯净的数据解码与投递，利用 Effect 的管道流转
-        const decoded = textDecoder.decode(chunk);
-        yield* Queue.offer(messageQueue, decoded);
-      }),
+    (chunk) => Queue.offer(messageQueue, textDecoder.decode(chunk)),
     {
-      // 3. 严格遵循接口，在这里极其干净地解开你的状态锁
-      onOpen: Effect.gen(function* () {
-        yield* Effect.logInfo("🔥 [连接成功] 声明式网络流已通电，解开状态锁！");
-        yield* Deferred.succeed(isSocketOpen, void 0);
-      }),
+      onOpen: Effect.logInfo("🔥 [连接成功] 声明式网络流已通电，解开状态锁！").pipe(
+        Effect.andThen(Deferred.succeed(isSocketOpen, void 0))),
     },
   );
 };
@@ -79,11 +68,9 @@ export const wsSubCommands = Command.make("ws", {}, () =>
     });
     const write = yield* wsConnection.writer;
 
-    // 收件箱（原有的）
-    const messageQueue = yield* Queue.bounded<string>(100);
-    // 💡 改造 1：新增发件箱（控制队列）
-    const controlQueue = yield* Queue.unbounded<string>();
 
+    const messageQueue = yield* Queue.bounded<string>(100);
+    const controlQueue = yield* Queue.unbounded<string>();
     const isSocketOpen = yield* Deferred.make<void, never>();
 
     const heartbeatPump = createHeartbeatPump(controlQueue, isSocketOpen);
