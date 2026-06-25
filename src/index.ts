@@ -1,11 +1,10 @@
+import { Effect } from "effect";
 import { Command } from "@effect/cli";
 import { FetchHttpClient, Socket } from "@effect/platform";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Effect } from "effect";
 import { NetworkLive } from "./infrastructure/NetworkLive";
 import { LocalStorageLive } from "./infrastructure/LocalStorageLive";
 import { PolymarketApiLive } from "./services/PolymarketApi";
-
 import { PolymarketHarvesterLive } from "./services/PolymarketHarvester";
 import { syncSubCommand } from "./commands/sync";
 import { allSubCommands } from "./commands/all";
