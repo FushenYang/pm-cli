@@ -18,7 +18,7 @@ const createDynamicStrategy = (controlQueue: Queue.Enqueue<string>) =>
       JSON.stringify({
         operation: "subscribe",
         assets_ids: [
-          "85367286745806857961178482075931972831841231758328346969840810630055458089640",
+          "2293765953960121477637189818103417477577027293347888634089788327148014326181",
         ],
         custom_feature_enabled: true,
       }),
