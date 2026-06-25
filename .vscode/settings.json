@@ -13,5 +13,7 @@
 
   "search.exclude": {
     "repos/**": true
-  }
+  },
+  "sqltools.connections": [],
+  "sqltools.useNodeRuntime": true
 }
