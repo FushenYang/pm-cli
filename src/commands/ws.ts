@@ -1,14 +1,16 @@
 import { Command } from "@effect/cli";
 import { Socket } from "@effect/platform";
-import { Effect, Queue,  Stream, Duration, Deferred } from "effect";
+import { Effect, Queue, Stream, Duration, Deferred } from "effect";
 
 import { Storage } from "../services/Storage";
-import { createHeartbeatPump, createNetworkPump, createSenderPump } from "../infrastructure/polymarket/WebSocketPump";
+import {
+  createHeartbeatPump,
+  createNetworkPump,
+  createSenderPump,
+} from "../infrastructure/polymarket/WebSocketPump";
 
 const POLYMARKET_WS_URL =
   "wss://ws-subscriptions-clob.polymarket.com/ws/market";
-
-
 
 const createDynamicStrategy = (controlQueue: Queue.Enqueue<string>) =>
   Effect.gen(function* () {
@@ -25,8 +27,10 @@ const createDynamicStrategy = (controlQueue: Queue.Enqueue<string>) =>
     );
   });
 
-
-const createTakeMessage = (count:number,messageQueue: Queue.Dequeue<string>)=>
+const createTakeMessage = (
+  count: number,
+  messageQueue: Queue.Dequeue<string>,
+) =>
   Effect.andThen(Storage, (storage) =>
     Stream.fromQueue(messageQueue).pipe(
       Stream.map((msg) => msg.trim()),
@@ -37,10 +41,9 @@ const createTakeMessage = (count:number,messageQueue: Queue.Dequeue<string>)=>
         Effect.log(`📥 [${c}/${count}] 拦截流出数据: ${msg.slice(0, 100)}...`),
       ),
       Stream.map(([msg]) => msg),
-      Stream.run(storage.makeJsonlSink("orderbook"))
-    )
+      Stream.run(storage.makeJsonlSink("orderbook")),
+    ),
   );
-
 
 export const wsSubCommands = Command.make("ws", {}, () =>
   Effect.gen(function* () {
@@ -51,7 +54,6 @@ export const wsSubCommands = Command.make("ws", {}, () =>
     });
     const write = yield* wsConnection.writer;
     yield* Storage;
-
 
     const messageQueue = yield* Queue.bounded<string>(100);
     const controlQueue = yield* Queue.unbounded<string>();
@@ -66,8 +68,6 @@ export const wsSubCommands = Command.make("ws", {}, () =>
       isSocketOpen,
     );
 
-
-
     yield* Effect.logInfo("📡 正在将网络基础设施挂载到后台...");
 
     yield* Effect.forkScoped(networkPump);
@@ -77,7 +77,7 @@ export const wsSubCommands = Command.make("ws", {}, () =>
 
     yield* Effect.logInfo("🎯 前台主业务开始阻塞拦截数据...");
 
-    yield* createTakeMessage(50,messageQueue);
+    yield* createTakeMessage(50, messageQueue);
   }).pipe(
     Effect.scoped,
     Effect.andThen(Effect.logInfo(`🎉 50条数据抓取完毕,资源已全部安全释放！`)),

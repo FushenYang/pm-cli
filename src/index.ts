@@ -9,6 +9,7 @@ import { PolymarketHarvesterLive } from "./services/PolymarketHarvester";
 import { syncSubCommand } from "./commands/sync";
 import { allSubCommands } from "./commands/all";
 import { wsSubCommands } from "./commands/ws";
+import { TextDecoderLive } from "./services/TextDecoderService";
 
 const rootCommand = Command.make("pm").pipe(
   Command.withSubcommands([syncSubCommand, allSubCommands, wsSubCommands]),
@@ -29,5 +30,6 @@ cli(process.argv).pipe(
   Effect.provide(FetchHttpClient.layer),
   Effect.provide(NetworkLive),
   Effect.provide(Socket.layerWebSocketConstructorGlobal),
+  Effect.provide(TextDecoderLive),
   NodeRuntime.runMain,
 );
