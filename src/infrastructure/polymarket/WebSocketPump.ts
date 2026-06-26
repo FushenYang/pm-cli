@@ -1,6 +1,7 @@
 import type { Socket } from "@effect/platform";
 import { Deferred, Effect, Queue, Schedule } from "effect";
 import { TextDecoderService } from "../../services/TextDecoderService";
+import { defaultRuntimeFlags } from "effect/Runtime";
 
 export const createNetworkPump = (
   wsConnection: Socket.Socket,
