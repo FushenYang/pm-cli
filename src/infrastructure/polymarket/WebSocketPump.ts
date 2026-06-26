@@ -12,7 +12,7 @@ export const createNetworkPump = (
     {
       onOpen: Effect.logInfo(
         "🔥 [连接成功] 声明式网络流已通电，解开状态锁！",
-      ).pipe(Effect.andThen(Deferred.succeed(isSocketOpen, void 0))),
+      ).pipe(Effect.andThen(() => Deferred.succeed(isSocketOpen, void 0))),
     },
   );
 };
