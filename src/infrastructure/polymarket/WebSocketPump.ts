@@ -1,23 +1,22 @@
-import type { Socket } from "@effect/platform";
-import { Deferred, Effect, Queue, Schedule, identity } from "effect";
+import { Socket } from "@effect/platform";
+import { Chunk, Deferred, Effect, Queue, Schedule, Stream } from "effect";
 import { TextDecoderService } from "../../services/TextDecoderService";
 
 export const createNetworkPump = (
   wsConnection: Socket.Socket,
   messageQueue: Queue.Enqueue<string>,
   isSocketOpen: Deferred.Deferred<void, never>,
-): Effect.Effect<void, Socket.SocketError, TextDecoderService> =>
+) =>
   TextDecoderService.pipe(
     Effect.andThen((decoder) =>
       wsConnection.run(
         (chunk) => messageQueue.pipe(Queue.offer(decoder.decode(chunk))),
         {
-          onOpen: Effect.logInfo(
-            "🔥 [连接成功] 声明式网络流已通电，解开状态锁！",
-          ).pipe(Effect.andThen(() => Deferred.succeed(isSocketOpen, void 0))),
+          onOpen: Deferred.succeed(isSocketOpen, void 0),
         },
       ),
     ),
+    Effect.tap(() => Effect.logInfo("网络泵已激活，开始工作...")),
   );
 
 export const createHeartbeatPump = (
