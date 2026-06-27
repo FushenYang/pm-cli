@@ -7,12 +7,12 @@ import { LocalStorageLive } from "./infrastructure/LocalStorageLive";
 import { PolymarketApiLive } from "./services/PolymarketApi";
 import { PolymarketHarvesterLive } from "./services/PolymarketHarvester";
 import { syncSubCommand } from "./commands/sync";
-import { allSubCommands } from "./commands/all";
+import { marketSubCommands } from "./commands/market";
 import { wsSubCommands } from "./commands/ws";
 import { TextDecoderService } from "./services/TextDecoderService";
 
 const rootCommand = Command.make("pm").pipe(
-  Command.withSubcommands([syncSubCommand, allSubCommands, wsSubCommands]),
+  Command.withSubcommands([syncSubCommand, marketSubCommands, wsSubCommands]),
 );
 
 // 2. 将命令打包为标准的 CLI 应用程序

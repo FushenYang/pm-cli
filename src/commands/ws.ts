@@ -8,25 +8,22 @@ import {
   createNetworkPump,
   createSenderPump,
 } from "../infrastructure/polymarket/WebSocketPump";
-import { getNetworkStream } from "../infrastructure/polymarket/getNetworkStream";
 
 const POLYMARKET_WS_URL =
   "wss://ws-subscriptions-clob.polymarket.com/ws/market";
+const PAYLOAD = {
+  operation: "subscribe",
+  assets_ids: [
+    "27146956652877944551877724690365745048289675287536243265951843487691050802191",
+  ],
+  custom_feature_enabled: true,
+};
 
 const createDynamicStrategy = (controlQueue: Queue.Enqueue<string>) =>
-  Effect.gen(function* () {
-    yield* Effect.logInfo("🚨 添加订阅");
-    yield* Queue.offer(
-      controlQueue,
-      JSON.stringify({
-        operation: "subscribe",
-        assets_ids: [
-          "2293765953960121477637189818103417477577027293347888634089788327148014326181",
-        ],
-        custom_feature_enabled: true,
-      }),
-    );
-  });
+  controlQueue.pipe(
+    Queue.offer(JSON.stringify(PAYLOAD)),
+    Effect.tap(() => Effect.logInfo("订阅市场")),
+  );
 
 const createTakeMessage = (
   count: number,
@@ -63,19 +60,16 @@ export const wsSubCommands = Command.make("ws", {}, () =>
     const heartbeatPump = createHeartbeatPump(controlQueue, isSocketOpen);
     const senderPump = createSenderPump(controlQueue, write);
     const dynamicStrategy = createDynamicStrategy(controlQueue);
-    const networkStream = getNetworkStream(wsConnection, isSocketOpen);
-    const pipeToQueue = Stream.runForEach(networkStream, (str) =>
-      Queue.offer(messageQueue, str),
+
+    const networkPump = createNetworkPump(
+      wsConnection,
+      messageQueue,
+      isSocketOpen,
     );
-    // const networkPump = createNetworkPump(
-    //   wsConnection,
-    //   messageQueue,
-    //   isSocketOpen,
-    // );
 
     yield* Effect.logInfo("📡 正在将网络基础设施挂载到后台...");
 
-    yield* Effect.forkScoped(pipeToQueue);
+    yield* Effect.forkScoped(networkPump);
     yield* Effect.forkScoped(senderPump);
     yield* Effect.forkScoped(heartbeatPump);
     yield* Effect.forkScoped(dynamicStrategy);
