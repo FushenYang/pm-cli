@@ -10,6 +10,7 @@ import { syncSubCommand } from "./commands/sync";
 import { marketSubCommands } from "./commands/market";
 import { wsSubCommands } from "./commands/ws";
 import { TextDecoderService } from "./services/TextDecoderService";
+import { TextEncoderService } from "./services/TextEncoderService";
 
 const rootCommand = Command.make("pm").pipe(
   Command.withSubcommands([syncSubCommand, marketSubCommands, wsSubCommands]),
@@ -31,5 +32,6 @@ cli(process.argv).pipe(
   Effect.provide(NetworkLive),
   Effect.provide(Socket.layerWebSocketConstructorGlobal),
   Effect.provide(TextDecoderService.layer),
+  Effect.provide(TextEncoderService.layer),
   NodeRuntime.runMain,
 );
