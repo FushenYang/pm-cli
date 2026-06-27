@@ -10,7 +10,7 @@ export const ConfigLive = Layer.effect(
   AppConfig,
   Effect.gen(function* () {
     // 🌟 核心修正：1. 纯粹地组合出我们完美的平台无关配置大转盘（此时它是个 Config 描述）
-    const proxyConfigBlueprint = Config.string("http_proxy").pipe(
+    const proxyConfigBlueprint = Config.string("all_proxy").pipe(
       Config.orElse(() => Config.string("HTTP_PROXY")),
       Config.option,
     );

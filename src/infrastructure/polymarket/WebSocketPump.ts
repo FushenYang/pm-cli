@@ -1,5 +1,5 @@
 import { Socket } from "@effect/platform";
-import { Chunk, Deferred, Effect, Queue, Schedule, Stream } from "effect";
+import { Deferred, Effect, Queue, Schedule, Stream } from "effect";
 import { TextDecoderService } from "../../services/TextDecoderService";
 
 export const createNetworkPump = (
@@ -19,6 +19,21 @@ export const createNetworkPump = (
     Effect.tap(() => Effect.logInfo("网络泵已激活，开始工作...")),
   );
 
+export const getSocketPump = (
+  wsConnection: Socket.Socket,
+  isSocketOpen: Deferred.Deferred<void, never>,
+) =>
+  Effect.gen(function* () {
+    const decoder = yield* TextDecoderService;
+    const queue = yield* Queue.unbounded<string>();
+    yield* wsConnection.run(
+      (chunk) => queue.pipe(Queue.offer(decoder.decode(chunk))),
+      {
+        onOpen: Deferred.succeed(isSocketOpen, void 0),
+      },
+    );
+    return Stream.fromQueue(queue);
+  });
 export const createHeartbeatPump = (
   controlQueue: Queue.Enqueue<string>,
   isSocketOpen: Deferred.Deferred<void, never>,

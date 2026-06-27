@@ -8,6 +8,7 @@ import {
   createNetworkPump,
   createSenderPump,
 } from "../infrastructure/polymarket/WebSocketPump";
+import { getNetworkStream } from "../infrastructure/polymarket/getNetworkStream";
 
 const POLYMARKET_WS_URL =
   "wss://ws-subscriptions-clob.polymarket.com/ws/market";
@@ -62,15 +63,19 @@ export const wsSubCommands = Command.make("ws", {}, () =>
     const heartbeatPump = createHeartbeatPump(controlQueue, isSocketOpen);
     const senderPump = createSenderPump(controlQueue, write);
     const dynamicStrategy = createDynamicStrategy(controlQueue);
-    const networkPump = createNetworkPump(
-      wsConnection,
-      messageQueue,
-      isSocketOpen,
+    const networkStream = getNetworkStream(wsConnection, isSocketOpen);
+    const pipeToQueue = Stream.runForEach(networkStream, (str) =>
+      Queue.offer(messageQueue, str),
     );
+    // const networkPump = createNetworkPump(
+    //   wsConnection,
+    //   messageQueue,
+    //   isSocketOpen,
+    // );
 
     yield* Effect.logInfo("📡 正在将网络基础设施挂载到后台...");
 
-    yield* Effect.forkScoped(networkPump);
+    yield* Effect.forkScoped(pipeToQueue);
     yield* Effect.forkScoped(senderPump);
     yield* Effect.forkScoped(heartbeatPump);
     yield* Effect.forkScoped(dynamicStrategy);
