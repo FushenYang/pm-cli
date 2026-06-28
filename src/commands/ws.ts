@@ -12,9 +12,9 @@ import {
 const POLYMARKET_WS_URL =
   "wss://ws-subscriptions-clob.polymarket.com/ws/market";
 const PAYLOAD = {
-  operation: "subscribe",
+  type: "market",
   assets_ids: [
-    "62131913648515148266463816694306031394539656598501514114816028349608560215534",
+    "98362909175358653588446890841785939551654425632377765218392158614658388328645",
   ],
   custom_feature_enabled: true,
 };
