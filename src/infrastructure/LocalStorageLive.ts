@@ -66,11 +66,18 @@ const implMakeJsonlSink =
     Effect.gen(function* () {
       const dir = options?.dir ?? ".local";
       const encoder = yield* TextEncoderService;
-      const millis = yield* Clock.currentTimeMillis;
-      const timestamp = new Date(millis)
-        .toISOString()
-        .replace(/[-T:]/g, "")
-        .split(".")[0];
+      const now = yield* DateTime.now;
+      const timestamp = DateTime.format(now, {
+        locale: "zh-CN",
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+      }).replace(/\D/g, "");
 
       // 2. 拼接路径
       const targetDir = path.join(path.resolve("."), dir);
