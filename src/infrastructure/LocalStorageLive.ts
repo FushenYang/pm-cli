@@ -1,7 +1,8 @@
-import { Layer, Effect, Clock, Stream, Sink } from "effect";
+import { Layer, Effect, Clock, Stream, Sink, DateTime } from "effect";
 import { FileSystem } from "@effect/platform/FileSystem";
 import { Path } from "@effect/platform/Path";
 import { Storage } from "../services/Storage";
+import { TextEncoderService } from "../services/TextEncoderService";
 
 export const LocalStorageLive = Layer.effect(
   Storage,
@@ -16,22 +17,29 @@ export const LocalStorageLive = Layer.effect(
   }),
 );
 
-
 const makeWriteStream = (
   fs: FileSystem, // 直接使用模块导出的接口类型
-  path: Path
-): Storage["writeStream"] => {      // 👈 终极魔法：直接“白嫖”接口里定义好的完美签名！
+  path: Path,
+): Storage["writeStream"] => {
+  // 👈 终极魔法：直接“白嫖”接口里定义好的完美签名！
   // 此时参数 key, byteStream, options 的类型已经被自动推导出来了，不需要写任何 :xxx
   return (key, byteStream, options) =>
     Effect.gen(function* () {
       const ext = options?.ext ?? "csv";
       const dir = options?.dir ?? ".local";
-
-      const millis = yield* Clock.currentTimeMillis;
-      const timestamp = new Date(millis)
-        .toISOString()
-        .replace(/[-T:]/g, "")
-        .split(".")[0];
+      const now = yield* DateTime.now;
+      const timestamp = DateTime.format(now, {
+        locale: "zh-CN",
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+      }).replace(/\D/g, "");
+      //yield* Effect.logInfo(`💾 数据落盘管道已锁定目标: ${timestamp}`);
 
       const targetDir = path.join(path.resolve("."), dir);
       const targetFilePath = path.join(targetDir, `${key}-${timestamp}.${ext}`);
@@ -39,51 +47,53 @@ const makeWriteStream = (
       yield* fs
         .makeDirectory(targetDir, { recursive: true })
         .pipe(
-          Effect.mapError((e) => new Error(`Failed to make directory: ${String(e)}`)),
+          Effect.mapError(
+            (e) => new Error(`Failed to make directory: ${String(e)}`),
+          ),
         );
 
       yield* byteStream.pipe(
         Stream.run(fs.sink(targetFilePath)),
-        Effect.mapError((e) => new Error(`Failed to write stream: ${String(e)}`)),
+        Effect.mapError(
+          (e) => new Error(`Failed to write stream: ${String(e)}`),
+        ),
       );
 
       return targetFilePath;
     });
 };
 
-const implMakeJsonlSink = (fs: FileSystem, path: Path): Storage["makeJsonlSink"] => {
-  const textEncoder = new TextEncoder();
-  return (key, options) =>
-    Sink.unwrap(
-      Effect.gen(function* () {
-        const dir = options?.dir ?? ".local";
+const implMakeJsonlSink =
+  (fs: FileSystem, path: Path): Storage["makeJsonlSink"] =>
+  (key, options) =>
+    Effect.gen(function* () {
+      const dir = options?.dir ?? ".local";
+      const encoder = yield* TextEncoderService;
+      const millis = yield* Clock.currentTimeMillis;
+      const timestamp = new Date(millis)
+        .toISOString()
+        .replace(/[-T:]/g, "")
+        .split(".")[0];
 
-        // 1. 生成高精度时间戳
-        const millis = yield* Clock.currentTimeMillis;
-        const timestamp = new Date(millis)
-          .toISOString()
-          .replace(/[-T:]/g, "")
-          .split(".")[0];
+      // 2. 拼接路径
+      const targetDir = path.join(path.resolve("."), dir);
+      const targetFilePath = path.join(targetDir, `${key}-${timestamp}.jsonl`);
 
-        // 2. 拼接路径
-        const targetDir = path.join(path.resolve("."), dir);
-        const targetFilePath = path.join(targetDir, `${key}-${timestamp}.jsonl`);
+      // 3. 确保目录存在
+      yield* fs.makeDirectory(targetDir, { recursive: true });
 
-        // 3. 确保目录存在
-        yield* fs.makeDirectory(targetDir, { recursive: true });
+      yield* Effect.logInfo(`📁 数据落盘管道已锁定目标: ${targetFilePath}`);
 
-        yield* Effect.logInfo(`📁 数据落盘管道已锁定目标: ${targetFilePath}`);
-
-        // 4. 构建并返回底层的物理 Sink
-        // fs.sink 默认接收 Uint8Array，通过 mapInput 向上游暴露出 string 接口
-        return fs.sink(targetFilePath).pipe(
-          Sink.mapInput((line: string) => textEncoder.encode(line + "\n"))
-        );
-      }).pipe(
+      // 4. 构建并返回底层的物理 Sink
+      // fs.sink 默认接收 Uint8Array，通过 mapInput 向上游暴露出 string 接口
+      return fs
+        .sink(targetFilePath)
+        .pipe(Sink.mapInput((line: string) => encoder.encode(line + "\n")));
+    })
+      .pipe(
         // 将 Platform 层的专有错误，统一抹平为接口契约中定义的标准 Error
         Effect.mapError(
-          (e) => new Error(`MakeJsonlSink 初始化或写入失败: ${String(e)}`)
-        )
+          (e) => new Error(`MakeJsonlSink 初始化或写入失败: ${String(e)}`),
+        ),
       )
-    );
-}
+      .pipe(Sink.unwrap);

@@ -1,4 +1,5 @@
 import { Context, Effect, Sink, Stream } from "effect";
+import type { TextEncoderService } from "./TextEncoderService";
 
 export interface Storage {
   readonly writeStream: (
@@ -8,8 +9,8 @@ export interface Storage {
   ) => Effect.Effect<string, Error, never>;
   readonly makeJsonlSink: (
     key: string,
-    options?: { dir?: string }
-  ) => Sink.Sink<void, string, never, Error, never>;
+    options?: { dir?: string },
+  ) => Sink.Sink<void, string, never, Error, TextEncoderService>;
 }
 
 export const Storage = Context.GenericTag<Storage>("infrastructure/Storage");
