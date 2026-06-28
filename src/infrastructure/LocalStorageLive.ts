@@ -17,13 +17,12 @@ export const LocalStorageLive = Layer.effect(
   }),
 );
 
-const makeWriteStream = (
-  fs: FileSystem, // 直接使用模块导出的接口类型
-  path: Path,
-): Storage["writeStream"] => {
-  // 👈 终极魔法：直接“白嫖”接口里定义好的完美签名！
-  // 此时参数 key, byteStream, options 的类型已经被自动推导出来了，不需要写任何 :xxx
-  return (key, byteStream, options) =>
+const makeWriteStream =
+  (
+    fs: FileSystem, // 直接使用模块导出的接口类型
+    path: Path,
+  ): Storage["writeStream"] =>
+  (key, byteStream, options) =>
     Effect.gen(function* () {
       const ext = options?.ext ?? "csv";
       const dir = options?.dir ?? ".local";
@@ -39,7 +38,6 @@ const makeWriteStream = (
         second: "2-digit",
         hourCycle: "h23",
       }).replace(/\D/g, "");
-      //yield* Effect.logInfo(`💾 数据落盘管道已锁定目标: ${timestamp}`);
 
       const targetDir = path.join(path.resolve("."), dir);
       const targetFilePath = path.join(targetDir, `${key}-${timestamp}.${ext}`);
@@ -61,7 +59,6 @@ const makeWriteStream = (
 
       return targetFilePath;
     });
-};
 
 const implMakeJsonlSink =
   (fs: FileSystem, path: Path): Storage["makeJsonlSink"] =>
